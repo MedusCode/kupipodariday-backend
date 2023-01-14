@@ -3,6 +3,7 @@ import { BaseEntity } from '../../utils/entities/base.entity';
 import { IsInt, IsPositive, IsUrl, Length } from '@nestjs/class-validator';
 import { User } from '../../users/entities/user.entity';
 import { Offer } from '../../offers/entities/offer.entity';
+import { ColumnNumericTransformer } from '../../utils/helpers/columnNumericTransformer';
 
 @Entity()
 export class Wish extends BaseEntity {
@@ -18,11 +19,19 @@ export class Wish extends BaseEntity {
   @IsUrl()
   public image: string;
 
-  @Column('numeric', { scale: 2, nullable: false })
+  @Column('numeric', {
+    scale: 2,
+    nullable: false,
+    transformer: new ColumnNumericTransformer(),
+  })
   @IsPositive()
   public price: number;
 
-  @Column('numeric', { scale: 2, nullable: false })
+  @Column('numeric', {
+    scale: 2,
+    nullable: false,
+    transformer: new ColumnNumericTransformer(),
+  })
   @IsPositive()
   public raised: number;
 

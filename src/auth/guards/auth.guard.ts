@@ -24,14 +24,15 @@ export class AuthGuard implements CanActivate {
     try {
       payload = this.jwtService.verifyToken(token);
     } catch (err) {
+      //Кастомное исключение
       throw new UnauthorizedUserException();
     }
 
-    request.user = await this.userService
-      .findOne({ id: payload.id })
-      .catch(() => {
-        throw new UnauthorizedUserException();
-      });
+    request.user = await this.userService.findOne({ id: payload.id });
+
+    if (!request.user) {
+      throw new UnauthorizedUserException();
+    }
 
     return true;
   }

@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, FindOptionsWhere, Repository } from 'typeorm';
 import { Offer } from './entities/offer.entity';
 import { CreateOfferDto } from './dto/createOffer.dto';
-import { NOT_FOUND_ERROR_MESSAGE } from '../utils/constants';
+import {
+  BAD_REQUEST_MESSAGE,
+  FORBIDDEN_MESSAGE,
+  NOT_FOUND_MESSAGE,
+} from '../utils/constants';
 import { WishesService } from '../wishes/wishes.service';
 
 @Injectable()
@@ -13,7 +17,22 @@ export class OffersService {
     private wishesService: WishesService,
   ) {}
 
-  async create(creatOfferDto: CreateOfferDto, currentUser) {
+  async create(creatOfferDto: CreateOfferDto, currentUser): Promise<Offer> {
+    const wish = await this.wishesService.findOne(
+      {
+        id: creatOfferDto.itemId,
+      },
+      { owner: true },
+    );
+
+    if (currentUser.id === wish.owner.id) {
+      throw new Error(BAD_REQUEST_MESSAGE);
+    }
+
+    if (wish.raised + creatOfferDto.amount > wish.price) {
+      throw new Error(FORBIDDEN_MESSAGE);
+    }
+
     const offerDto = {
       ...creatOfferDto,
       user: currentUser,
@@ -28,22 +47,23 @@ export class OffersService {
   find(
     conditions: FindOptionsWhere<Offer>,
     relations: FindOptionsRelations<Offer> = { item: true, user: true },
-  ) {
+  ): Promise<Array<Offer>> {
     return this.offerRepository.find({ where: conditions, relations });
   }
 
-  findOne(
+  async findOne(
     conditions: FindOptionsWhere<Offer>,
     relations: FindOptionsRelations<Offer> = { item: true, user: true },
-  ) {
-    return this.offerRepository
-      .findOne({ where: conditions, relations })
-      .then((offer) => {
-        if (offer) {
-          return offer;
-        } else {
-          throw new Error(NOT_FOUND_ERROR_MESSAGE);
-        }
-      });
+  ): Promise<Offer> {
+    const offer = await this.offerRepository.findOne({
+      where: conditions,
+      relations,
+    });
+
+    if (offer) {
+      return offer;
+    } else {
+      throw new Error(NOT_FOUND_MESSAGE);
+    }
   }
 }

@@ -4,6 +4,9 @@ import { SignupDto } from './dto/signup.dto';
 import { TransformInterceptor } from '../interceptors/transform.interceptor';
 import { Response } from 'express';
 import { SigninDto } from './dto/signin.dto';
+import { duplicateKeyValueThrower } from '../utils/helpers/exceptionThrowers';
+import { UserAlreadyExistsException } from '../exceptions/userAlreadyExists.exception';
+import { ServerException } from '../exceptions/server.exception';
 
 @Controller('')
 export class AuthController {
@@ -15,7 +18,12 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Body() signupDto: SignupDto,
   ) {
-    return await this.authService.signup(res, signupDto);
+    try {
+      return await this.authService.signup(res, signupDto);
+    } catch (err) {
+      duplicateKeyValueThrower(err, new UserAlreadyExistsException());
+      throw new ServerException();
+    }
   }
 
   @UseInterceptors(TransformInterceptor)

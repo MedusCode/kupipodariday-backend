@@ -16,12 +16,13 @@ import { User } from '../users/entities/user.entity';
 import {
   badRequestThrower,
   notFoundThrower,
+  violatesForeignKeyThrower,
 } from '../utils/helpers/exceptionThrowers';
 import { NotFoundException } from '../exceptions/notFound.exception';
 import { ServerException } from '../exceptions/server.exception';
 import { UpdateWishDto } from './dto/updateWish.dto';
-import { OwnWishException } from '../exceptions/ownWish.exception';
-import { AlreadyOfferedException } from '../exceptions/alreadyOffered.exceptions';
+import { CopyOwnWishException } from '../exceptions/copyOwnWish.exception';
+import { AlreadyOfferedException } from '../exceptions/alreadyOffered.exception';
 
 @Controller('wishes')
 export class WishesController {
@@ -45,11 +46,13 @@ export class WishesController {
 
   @UseGuards(AuthGuard)
   @Get(':id')
-  getById(@Param('id') id: number) {
-    return this.wishesService.findOne({ id }).catch((err) => {
+  async getById(@Param('id') id: number) {
+    try {
+      return await this.wishesService.findOne({ id });
+    } catch (err) {
       notFoundThrower(err, new NotFoundException('Подарок'));
       throw new ServerException();
-    });
+    }
   }
 
   @UseGuards(AuthGuard)
@@ -61,11 +64,13 @@ export class WishesController {
   ) {
     const wish = await this.wishesService.checkOwner(id, user.id);
 
-    return this.wishesService.update({ id }, body, wish).catch((err) => {
+    try {
+      return await this.wishesService.update({ id }, body, wish);
+    } catch (err) {
       notFoundThrower(err, new NotFoundException('Подарок'));
       badRequestThrower(err, new AlreadyOfferedException());
       throw new ServerException();
-    });
+    }
   }
 
   @UseGuards(AuthGuard)
@@ -73,21 +78,25 @@ export class WishesController {
   async deleteById(@Param('id') id: number, @CurrentUser() user: User) {
     const wish = await this.wishesService.checkOwner(id, user.id);
 
-    this.wishesService.delete({ id }).catch((err) => {
+    try {
+      await this.wishesService.delete({ id });
+      return wish;
+    } catch (err) {
+      violatesForeignKeyThrower(err, new AlreadyOfferedException());
       notFoundThrower(err, new NotFoundException('Подарок'));
       throw new ServerException();
-    });
-
-    return wish;
+    }
   }
 
   @UseGuards(AuthGuard)
   @Post(':id/copy')
-  copy(@Param('id') id: number, @CurrentUser() user: User) {
-    return this.wishesService.copy(id, user).catch((err) => {
+  async copy(@Param('id') id: number, @CurrentUser() user: User) {
+    try {
+      return await this.wishesService.copy(id, user);
+    } catch (err) {
       notFoundThrower(err, new NotFoundException('Подарок'));
-      badRequestThrower(err, new OwnWishException());
+      badRequestThrower(err, new CopyOwnWishException());
       throw new ServerException();
-    });
+    }
   }
 }

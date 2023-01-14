@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-export class OwnWishException extends HttpException {
+export class CopyOwnWishException extends HttpException {
   constructor() {
     super(
       `Пользователь не может копировать свой подарок`,

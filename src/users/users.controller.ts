@@ -16,7 +16,7 @@ import {
   duplicateKeyValueThrower,
   notFoundThrower,
 } from '../utils/helpers/exceptionThrowers';
-import { UserAlreadyExistsException } from '../exceptions/userAlreadyExists.exceptions';
+import { UserAlreadyExistsException } from '../exceptions/userAlreadyExists.exception';
 import { WishesService } from '../wishes/wishes.service';
 import { NotFoundException } from '../exceptions/notFound.exception';
 import { ServerException } from '../exceptions/server.exception';
@@ -36,11 +36,13 @@ export class UsersController {
   }
 
   @Patch('me')
-  updateMe(@Body() body: UpdateUserDto, @CurrentUser() user: User) {
-    return this.usersService.update({ id: user.id }, body).catch((err) => {
+  async updateMe(@Body() body: UpdateUserDto, @CurrentUser() user: User) {
+    try {
+      return await this.usersService.update({ id: user.id }, body);
+    } catch (err) {
       duplicateKeyValueThrower(err, new UserAlreadyExistsException());
       throw new ServerException();
-    });
+    }
   }
 
   @Get('me/wishes')
@@ -50,34 +52,31 @@ export class UsersController {
 
   @Get(':username')
   async getUser(@Param('username') username: string) {
-    const user = await this.usersService
-      .findOne({ username: username })
-      .catch((err) => {
-        notFoundThrower(err, new NotFoundException('Пользователь'));
-        throw new ServerException();
-      });
+    try {
+      const user = await this.usersService.findOne({ username: username });
 
-    if (user) {
       delete user.email;
       return user;
-    } else {
+    } catch (err) {
+      notFoundThrower(err, new NotFoundException('Пользователь'));
       throw new ServerException();
     }
   }
 
   @Get(':username/wishes')
   async getUserWishes(@Param('username') username: string) {
-    const user = await this.usersService
-      .findOne({ username: username }, { wishes: true })
-      .catch((err) => {
-        notFoundThrower(err, new NotFoundException('Пользователь'));
-        throw new ServerException();
-      });
-
-    return user.wishes;
+    try {
+      const user = await this.usersService.findOne(
+        { username: username },
+        { wishes: true },
+      );
+      return user.wishes;
+    } catch (err) {
+      notFoundThrower(err, new NotFoundException('Пользователь'));
+      throw new ServerException();
+    }
   }
 
-  //TODO: develop search
   @Post('find')
   async findByEmail(@Body() body: SearchDto) {
     return this.usersService.search(body.query);

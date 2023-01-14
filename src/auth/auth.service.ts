@@ -6,12 +6,7 @@ import { SigninDto } from './dto/signin.dto';
 import { compare } from '../utils/helpers/bcrypt';
 import { JwtService } from '../jwt/jwt.service';
 import { InvalidCredentialsException } from '../exceptions/invalidCredentials.exception';
-import {
-  duplicateKeyValueThrower,
-  notFoundThrower,
-} from '../utils/helpers/exceptionThrowers';
-import { UserAlreadyExistsException } from '../exceptions/userAlreadyExists.exceptions';
-import { ServerException } from '../exceptions/server.exception';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -25,10 +20,7 @@ export class AuthService {
       delete signupDto.about;
     }
 
-    const userEntity = await this.userService.create(signupDto).catch((err) => {
-      duplicateKeyValueThrower(err, new UserAlreadyExistsException());
-      throw new ServerException();
-    });
+    const userEntity = await this.userService.create(signupDto);
 
     delete userEntity.password;
 
@@ -38,12 +30,14 @@ export class AuthService {
   }
 
   async signin(res: Response, signinDto: SigninDto) {
-    const userEntity = await this.userService
-      .findOne({ username: signinDto.username })
-      .catch((err) => {
-        notFoundThrower(err, new InvalidCredentialsException());
-        throw new ServerException();
+    let userEntity: User;
+    try {
+      userEntity = await this.userService.findOne({
+        username: signinDto.username,
       });
+    } catch (err) {
+      throw new InvalidCredentialsException();
+    }
 
     const isMatched = await compare(signinDto.password, userEntity.password);
 
